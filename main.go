@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/mitchellh/hashstructure/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/parser"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -25,42 +26,14 @@ func main() {
 		DB:       0,  // use default DB
 	})
 
-	http.HandleFunc("/shop-api", getRoot)
-
-	// expiration in seconds
-
-	err := http.ListenAndServe(":3334", nil)
-
-	if errors.Is(err, http.ErrServerClosed) {
-		fmt.Printf("server closed\n")
-	} else if err != nil {
-		fmt.Printf("error starting server: %s\n", err)
-		os.Exit(1)
+	mux := http.NewServeMux()
+	s := &http.Server{
+		Addr:    ":3333",
+		Handler: mux,
 	}
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { handleRequest(w, r, rdb) })
 
-	handleQuery(rdb)
-}
-
-func handleQuery(rdb *redis.Client) {
-	err := rdb.Set(ctx, "key", "amogus", 60).Err()
-	if err != nil {
-		panic(err)
-	}
-
-	val, err := rdb.Get(ctx, "key").Result()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("key", val)
-
-	val2, err := rdb.Get(ctx, "key2").Result()
-	if err == redis.Nil {
-		fmt.Println("key2 does not exist")
-	} else if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("key2", val2)
-	}
+	log.Fatal(s.ListenAndServe())
 }
 
 type GraphqlRequest struct {
@@ -70,22 +43,19 @@ type GraphqlRequest struct {
 	Cookie        string
 }
 
-func getRoot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		return
-	}
+func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
+	skipCache := false
+	route := getEnv("URL", "http://localhost:3000/shop-api")
 	// convert body into gql request
 	bodyBytes, _ := io.ReadAll(r.Body)
-	bodyString := string(bodyBytes[:])
-
-	query, _ := parser.ParseQuery(&ast.Source{Input: bodyString})
-	println(query)
 
 	var gql GraphqlRequest
 	err := json.Unmarshal(bodyBytes, &gql)
 	if err != nil {
 		fmt.Println(err)
 	}
+	query, _ := parser.ParseQuery(&ast.Source{Input: gql.Query})
+
 	// set session cookie
 	// TODO ignore session cookie with request parameter
 	sessionCookie, err := r.Cookie("session")
@@ -93,15 +63,33 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 		gql.Cookie = sessionCookie.Value
 	}
 	// get hash
-	hash, err := hashstructure.Hash(gql, hashstructure.FormatV2, nil)
-	fmt.Println(hash)
+	hashI, err := hashstructure.Hash(gql, hashstructure.FormatV2, nil)
+	hash := strconv.FormatUint(hashI, 10)
 
-	// TODO check if mutation or query
-	// TODO check if response is found in redis and return response immediately
+	// check if mutation
+	// TODO somehow merge cached querries and mutations if both a query and a mutation are sent in a single request
+	for _, value := range query.Operations {
+		if value.Operation == "mutation" {
+			// for now, we just always forward the entire request if it contains a mutation
+			skipCache = true
+		}
+	}
+
+	// get response from cache
+	if !skipCache {
+		// TODO return proper headers aswell
+		val, err := rdb.Get(ctx, hash).Result()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			w.Write([]byte(val))
+			return
+		}
+	}
 
 	// fetch response if not found and save to redis
 	// create the post request
-	req, err := http.NewRequest(http.MethodPost, "http://localhost:3000/shop-api", bytes.NewReader(bodyBytes))
+	req, err := http.NewRequest(http.MethodPost, route, bytes.NewReader(bodyBytes))
 	req.Header = r.Header
 	client := http.Client{
 		Timeout: 30 * time.Second,
@@ -112,10 +100,13 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 		os.Exit(1)
 	}
 	responseBytes, err := io.ReadAll(res.Body)
-	//bodyString := string(bodyBytes)
-	//fmt.Println(bodyString)
+	responseString := string(responseBytes)
 
-	// TODO save to redis
+	// TODO expiration as parameter
+	err = rdb.Set(ctx, hash, responseString, time.Minute*10).Err()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	// set response headers
 	for key, value := range res.Header {
@@ -128,4 +119,11 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBytes)
 	return
 	fmt.Printf("%s \n", r.Method)
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }
