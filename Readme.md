@@ -10,6 +10,12 @@ to respond with the correct data for the currently authenticated User.
 
 It forwards any headers you set (except the Cookie header) to the graphql server.
 
+# Comparison
+### Without Cache
+![without-cache.png](images%2Fwithout-cache.png)
+### With Cache
+![with-cache.png](images%2Fwith-cache.png)
+
 # Run the Service
 The easiest way to run is with `docker compose up`
 
