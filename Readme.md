@@ -1,8 +1,11 @@
 # Grache
 Graphql Caching service
 
-This service proxies graphql querries and caches them for a specified ammount of time.
-It only caches querries, not mutations and checks the session Cookie (option to disable on per request basis)
+This service proxies graphql queries and caches them for 
+a specified amount of time (configurable on a per-request basis).
+
+It only caches queries, not mutations and checks the session 
+Cookie (option to disable on per-request basis)
 to respond with the correct data for the currently authenticated User.
 
 # ENV variables
