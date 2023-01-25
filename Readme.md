@@ -8,6 +8,8 @@ It only caches queries, not mutations and checks the session
 Cookie (optional, enable on per-request basis)
 to respond with the correct data for the currently authenticated User.
 
+It forwards any headers you set (except the Cookie header) to the graphql server.
+
 # Run the Service
 The easiest way to run is with `docker compose up`
 
