@@ -61,10 +61,17 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	query, _ := parser.ParseQuery(&ast.Source{Input: gql.Query})
 
 	// set session cookie
-	// TODO ignore session cookie with request parameter
-	sessionCookie, err := r.Cookie("session")
-	if err == nil && sessionCookie != nil {
-		gql.Cookie = sessionCookie.Value
+	ignoreCookies, err := strconv.ParseBool(r.URL.Query().Get("ignoreCookies"))
+	if err != nil {
+		ignoreCookies = true
+	}
+	if ignoreCookies {
+		r.Header.Del("Cookie")
+	} else {
+		sessionCookie, err := r.Cookie("session")
+		if err == nil && sessionCookie != nil {
+			gql.Cookie = sessionCookie.Value
+		}
 	}
 	// get hash
 	hashI, err := hashstructure.Hash(gql, hashstructure.FormatV2, nil)
@@ -106,8 +113,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	responseBytes, err := io.ReadAll(res.Body)
 	responseString := string(responseBytes)
 
-	// TODO expiration as parameter
-	err = rdb.Set(ctx, hash, responseString, time.Minute*10).Err()
+	expiration, err := strconv.Atoi(r.URL.Query().Get("expiration"))
+	if err != nil {
+		expiration = 10 * 60
+	}
+	err = rdb.Set(ctx, hash, responseString, time.Duration(expiration)*time.Second).Err()
 	if err != nil {
 		fmt.Println(err)
 	}

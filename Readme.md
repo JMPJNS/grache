@@ -5,7 +5,7 @@ This service proxies graphql queries and caches them for
 a specified amount of time (configurable on a per-request basis).
 
 It only caches queries, not mutations and checks the session 
-Cookie (option to disable on per-request basis)
+Cookie (optional, enable on per-request basis)
 to respond with the correct data for the currently authenticated User.
 
 # ENV variables
@@ -14,3 +14,8 @@ to respond with the correct data for the currently authenticated User.
 - REDIS_PASSWORD = (default is without password)
 - REDIS_DB = (default 0)
 - URL = the URL of the graphql server you want to cache for
+
+# Query parameters
+- ignoreCookies (true/false) = ignore cookies for this request (default true), 
+set this to false if you want to include session cookie for authentication
+- expiration (integer) = how many seconds to cache the response for (default 600)
