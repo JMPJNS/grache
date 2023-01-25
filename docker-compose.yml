@@ -1,5 +1,15 @@
 version: "3"
 services:
+  grache:
+    build: .
+    environment:
+      - PORT=3333
+      - REDIS_HOST=127.0.0.1:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - URL=http://127.0.0.1:3000/shop-api
+    restart: on-failure
+    network_mode: "host"
   redis:
     image: redis
     ports:

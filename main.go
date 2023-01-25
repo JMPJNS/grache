@@ -25,7 +25,7 @@ func main() {
 		redisDb = 0
 	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     getEnv("REDIS_HOST", "localhost:6379"),
+		Addr:     getEnv("REDIS_HOST", "127.0.0.1:6379"),
 		Password: getEnv("REDIS_PASSWORD", ""),
 		DB:       redisDb,
 	})
@@ -49,7 +49,7 @@ type GraphqlRequest struct {
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	skipCache := false
-	route := getEnv("URL", "http://localhost:3000/shop-api")
+	route := getEnv("URL", "http://127.0.0.1:3000/shop-api")
 	// convert body into gql request
 	bodyBytes, _ := io.ReadAll(r.Body)
 
