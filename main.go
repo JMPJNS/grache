@@ -20,15 +20,19 @@ import (
 var ctx = context.Background()
 
 func main() {
+	redisDb, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	if err != nil {
+		redisDb = 0
+	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     getEnv("REDIS_HOST", "localhost:6379"),
+		Password: getEnv("REDIS_PASSWORD", ""),
+		DB:       redisDb,
 	})
 
 	mux := http.NewServeMux()
 	s := &http.Server{
-		Addr:    ":3333",
+		Addr:    fmt.Sprintf(":%s", getEnv("PORT", "3333")),
 		Handler: mux,
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { handleRequest(w, r, rdb) })
