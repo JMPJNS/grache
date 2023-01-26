@@ -39,6 +39,6 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{github.run_number}}
+            ghcr.io/jmpjns/grache:latest
+            ghcr.io/jmpjns/grache:${{github.run_number}}
           labels: ${{ steps.meta.outputs.labels }}
