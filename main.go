@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -40,10 +41,6 @@ func main() {
 	log.Fatal(s.ListenAndServe())
 }
 
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-}
-
 type RequestContext struct {
 	Query         string                 `json:"query"`
 	OperationName string                 `json:"operationName"`
@@ -52,7 +49,6 @@ type RequestContext struct {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
-	enableCors(&w)
 	if r.Method == http.MethodOptions {
 		w.Write([]byte(""))
 		return
@@ -107,8 +103,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 			log.Println("Cache miss")
 		} else {
 			// TODO return proper headers aswell
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(val))
+			respond(w, val)
 			return
 		}
 	}
@@ -127,7 +122,16 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	responseBytes, err := io.ReadAll(res.Body)
+
+	var responseBytes []byte
+	switch res.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, _ := gzip.NewReader(res.Body)
+		defer reader.Close()
+		responseBytes, err = io.ReadAll(reader)
+	default:
+		responseBytes, err = io.ReadAll(res.Body)
+	}
 	responseString := string(responseBytes)
 
 	expiration, err := strconv.Atoi(r.URL.Query().Get("expiration"))
@@ -139,16 +143,29 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		log.Println("Error writing entry to redis", err.Error())
 	}
 
-	// set response headers
+	// pass through select headers
 	for key, value := range res.Header {
+		if key != "Set-Cookie" {
+			continue
+		}
 		for i := 0; i < len(value); i++ {
 			w.Header().Add(key, value[i])
 		}
 	}
 
 	// respond
-	w.Write(responseBytes)
+	respond(w, responseString)
 	return
+}
+
+func respond(w http.ResponseWriter, content string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	gw := gzip.NewWriter(w)
+	defer gw.Close()
+	gw.Write([]byte(content))
 }
 
 func getEnv(key, fallback string) string {
