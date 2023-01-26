@@ -40,6 +40,10 @@ func main() {
 	log.Fatal(s.ListenAndServe())
 }
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
 type RequestContext struct {
 	Query         string                 `json:"query"`
 	OperationName string                 `json:"operationName"`
@@ -48,6 +52,11 @@ type RequestContext struct {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
+	enableCors(&w)
+	if r.Method == http.MethodOptions {
+		w.Write([]byte(""))
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.WriteHeader(400)
 		w.Write([]byte("Only POST Method supported"))
@@ -98,6 +107,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 			log.Println("Cache miss")
 		} else {
 			// TODO return proper headers aswell
+			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(val))
 			return
 		}
