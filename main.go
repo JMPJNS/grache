@@ -94,6 +94,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 			// for now, we just always forward the entire request if it contains a mutation
 			skipCache = true
 		}
+		log.Println("Handling", value.Name)
 	}
 
 	// get response from cache
@@ -102,7 +103,6 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		if err != nil {
 			log.Println("Cache miss")
 		} else {
-			// TODO return proper headers aswell
 			respond(w, val)
 			return
 		}
@@ -139,7 +139,10 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	if err != nil {
 		expiration = 10 * 60
 	}
-	err = rdb.Set(ctx, hash, responseString, time.Duration(expiration)*time.Second).Err()
+	// don't save at all if expiration is set to 0
+	if expiration != 0 {
+		err = rdb.Set(ctx, hash, responseString, time.Duration(expiration)*time.Second).Err()
+	}
 	if err != nil {
 		log.Println("Error writing entry to redis", err.Error())
 	}
@@ -166,8 +169,6 @@ func respond(w http.ResponseWriter, content string) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 	w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
-
-	println()
 
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
