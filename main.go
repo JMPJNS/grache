@@ -50,7 +50,7 @@ type RequestContext struct {
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	if r.Method == http.MethodOptions {
-		respond(w, "")
+		respond(w, "", false)
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -103,7 +103,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		if err != nil {
 			log.Println("Cache miss")
 		} else {
-			respond(w, val)
+			respond(w, val, true)
 			return
 		}
 	}
@@ -158,17 +158,23 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	}
 
 	// respond
-	respond(w, responseString)
+	respond(w, responseString, false)
 	return
 }
 
-func respond(w http.ResponseWriter, content string) {
+func respond(w http.ResponseWriter, content string, cacheHit bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 	w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
+
+	if cacheHit {
+		w.Header().Set("Grache", "true")
+	} else {
+		w.Header().Set("Grache", "false")
+	}
 
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
