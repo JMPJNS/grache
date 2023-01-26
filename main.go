@@ -40,7 +40,7 @@ func main() {
 	log.Fatal(s.ListenAndServe())
 }
 
-type GraphqlRequest struct {
+type RequestContext struct {
 	Query         string                 `json:"query"`
 	OperationName string                 `json:"operationName"`
 	Variables     map[string]interface{} `json:"variables"`
@@ -48,33 +48,38 @@ type GraphqlRequest struct {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(400)
+		w.Write([]byte("Only POST Method supported"))
+		return
+	}
 	skipCache := false
 	route := getEnv("URL", "http://127.0.0.1:3000/shop-api")
-	// convert body into gql request
+	// convert body into requestContext
 	bodyBytes, _ := io.ReadAll(r.Body)
 
-	var gql GraphqlRequest
-	err := json.Unmarshal(bodyBytes, &gql)
+	var requestContext RequestContext
+	err := json.Unmarshal(bodyBytes, &requestContext)
 	if err != nil {
 		fmt.Println(err)
 	}
-	query, _ := parser.ParseQuery(&ast.Source{Input: gql.Query})
+	query, _ := parser.ParseQuery(&ast.Source{Input: requestContext.Query})
 
 	// set session cookie
 	ignoreCookies, err := strconv.ParseBool(r.URL.Query().Get("ignoreCookies"))
 	if err != nil {
-		ignoreCookies = true
+		ignoreCookies = false
 	}
 	if ignoreCookies {
 		r.Header.Del("Cookie")
 	} else {
 		sessionCookie, err := r.Cookie("session")
 		if err == nil && sessionCookie != nil {
-			gql.Cookie = sessionCookie.Value
+			requestContext.Cookie = sessionCookie.Value
 		}
 	}
 	// get hash
-	hashI, err := hashstructure.Hash(gql, hashstructure.FormatV2, nil)
+	hashI, err := hashstructure.Hash(requestContext, hashstructure.FormatV2, nil)
 	hash := strconv.FormatUint(hashI, 10)
 
 	// check if mutation
@@ -88,11 +93,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 
 	// get response from cache
 	if !skipCache {
-		// TODO return proper headers aswell
 		val, err := rdb.Get(ctx, hash).Result()
 		if err != nil {
-			fmt.Println(err)
+			log.Println("Cache miss")
 		} else {
+			// TODO return proper headers aswell
 			w.Write([]byte(val))
 			return
 		}
@@ -107,8 +112,10 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("client: error making http request: %s\n", err)
-		os.Exit(1)
+		log.Printf("client: error making http request: %s\n\n", err)
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
 	}
 	responseBytes, err := io.ReadAll(res.Body)
 	responseString := string(responseBytes)
@@ -119,7 +126,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	}
 	err = rdb.Set(ctx, hash, responseString, time.Duration(expiration)*time.Second).Err()
 	if err != nil {
-		fmt.Println(err)
+		log.Println("Error writing entry to redis", err.Error())
 	}
 
 	// set response headers
@@ -132,7 +139,6 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	// respond
 	w.Write(responseBytes)
 	return
-	fmt.Printf("%s \n", r.Method)
 }
 
 func getEnv(key, fallback string) string {

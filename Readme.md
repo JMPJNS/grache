@@ -27,6 +27,7 @@ The easiest way to run is with `docker compose up`
 - URL = the URL of the graphql server you want to cache for
 
 # Query parameters
-- ignoreCookies (true/false) = ignore cookies for this request (default true), 
-set this to false if you want to include session cookie for authentication
+- ignoreCookies (true/false) = ignore cookies for this request (default false), 
+set this to true if you don't care about authentication cookies
+(faster and more memory efficient since less cache entries)
 - expiration (integer) = how many seconds to cache the response for (default 600)
