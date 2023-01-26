@@ -50,6 +50,7 @@ type RequestContext struct {
 
 func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Write([]byte(""))
 		return
 	}
@@ -110,6 +111,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 
 	// fetch response if not found and save to redis
 	// create the post request
+	// TODO pass query parameters to the backend
 	req, err := http.NewRequest(http.MethodPost, route, bytes.NewReader(bodyBytes))
 	req.Header = r.Header
 	client := http.Client{
@@ -162,6 +164,8 @@ func respond(w http.ResponseWriter, content string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	println()
 
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
