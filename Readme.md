@@ -29,5 +29,7 @@ The easiest way to run is with `docker compose up`
 # Query parameters
 - ignoreCookies (true/false) = ignore cookies for this request (default false), 
 set this to true if you don't care about authentication cookies
+  - this is overwritten by the Grache-Ignore-Cookeis header
 (faster and more memory efficient since less cache entries)
 - expiration (integer) = how many seconds to cache the response for (default 600)
+  - this is overwritten by the Grache-Expiration header

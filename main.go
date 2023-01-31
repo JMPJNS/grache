@@ -72,6 +72,10 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 
 	// set session cookie
 	ignoreCookies, err := strconv.ParseBool(r.URL.Query().Get("ignoreCookies"))
+	ignoreCookieHeader := r.Header.Get("Grache-Ignore-Cookies")
+	if ignoreCookieHeader != "" {
+		ignoreCookies, err = strconv.ParseBool(ignoreCookieHeader)
+	}
 	if err != nil {
 		ignoreCookies = false
 	}
@@ -136,11 +140,16 @@ func handleRequest(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	responseString := string(responseBytes)
 
 	expiration, err := strconv.Atoi(r.URL.Query().Get("expiration"))
+	expirationHeader := r.Header.Get("Grache-Expiration")
+	if expirationHeader != "" {
+		expiration, err = strconv.Atoi(expirationHeader)
+	}
 	if err != nil {
 		expiration = 10 * 60
 	}
 	// don't save at all if expiration is set to 0
-	if expiration != 0 {
+	// only save if the StatusCode is OK
+	if expiration != 0 && res.StatusCode == http.StatusOK {
 		err = rdb.Set(ctx, hash, responseString, time.Duration(expiration)*time.Second).Err()
 	}
 	if err != nil {
