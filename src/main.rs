@@ -37,6 +37,9 @@ async fn cache_post(
 
     // check what type of request it is
     let request_context = RequestContext::new(&content_type, &body);
+
+    // TODO extract the object to cache out of this, should be the same for every type that is cachable
+    // prolly like {data enum, url}
     match request_context {
         RequestContext::GQL(gql, request_type) => {
 
