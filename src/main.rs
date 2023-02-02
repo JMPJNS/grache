@@ -2,13 +2,13 @@ mod config;
 mod request_context;
 
 use crate::config::get_grache_config;
+use crate::request_context::RequestContext;
 use axum::body::Body;
 use axum::extract::Query;
 use axum::headers::ContentType;
 use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use axum::{routing::get, Router, TypedHeader};
 use std::collections::HashMap;
-use crate::request_context::RequestContext;
 
 #[tokio::main]
 async fn main() {
@@ -37,8 +37,18 @@ async fn cache_post(
 
     // check what type of request it is
     let request_context = RequestContext::new(&content_type, &body);
-    println!("{:?}", request_context);
-    println!("{:?}", config);
+    match request_context {
+        RequestContext::GQL(gql, request_type) => {
+
+        }
+        RequestContext::JSON(val) => {
+
+        }
+        // always pass through any unknown requests
+        _ => {
+
+        }
+    }
     "aughh"
 }
 

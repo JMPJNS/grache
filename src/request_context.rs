@@ -7,30 +7,36 @@ use serde_json::Value;
 
 #[derive(Debug)]
 pub enum RequestContext {
-    GQL(GQLRequest, GQLType),
     Unknown,
+    JSON(Value),
+    GQL(GQLRequest, GQLType),
 }
 
 impl RequestContext {
     /// checks what type of request it is
     /// by looking at the content_type and trying to parse json/graphql
     pub fn new(content_type: &ContentType, content: &str) -> RequestContext {
-        if content_type != &ContentType::json() {
-            return RequestContext::Unknown;
-        }
+        let mut rq = RequestContext::Unknown;
 
+        rq = RequestContext::check_for_json(&content_type, &content).unwrap_or(rq);
+        rq = RequestContext::check_for_gql(&content_type, &content).unwrap_or(rq);
+
+        return rq;
+    }
+
+    fn check_for_gql(content_type: &ContentType, content: &str) -> Option<RequestContext> {
         // check if graphql request
         let gql_request: Option<GQLRequest> = serde_json::from_str(content).unwrap_or_default();
         if let Some(gql) = gql_request {
             // this gets set to true inside the match block
             // if the gql request is of type mutation
-            let mut is_mutation = false;
+            let mut contains_mutation = false;
             let is_gql = match parse_query::<&str>(&gql.query) {
                 // TODO check all of the definitions instead of just the first one
                 Ok(query) => match &query.definitions[0] {
                     Definition::Operation(o) => match o {
                         OperationDefinition::Mutation(_) => {
-                            is_mutation = true;
+                            contains_mutation = true;
                             true
                         }
                         OperationDefinition::Query(_) => true,
@@ -41,30 +47,38 @@ impl RequestContext {
                 Err(_) => false,
             };
             if is_gql {
-                return RequestContext::GQL(
+                return Some(RequestContext::GQL(
                     gql,
-                    if is_mutation {
+                    if contains_mutation {
                         GQLType::Mutation
                     } else {
                         GQLType::Query
                     },
-                );
+                ))
             }
-        };
-
-        return RequestContext::Unknown;
+        }
+        None
+    }
+    fn check_for_json(content_type: &ContentType, content: &str) -> Option<RequestContext> {
+        if content_type == &ContentType::json() {
+            let json = serde_json::from_str(&content);
+            if let Some(data) = json.ok() {
+                return Some(RequestContext::JSON(data))
+            }
+        }
+        None
     }
 }
 
 #[test]
-fn is_query() {
+fn is_gql_query() {
     use std::mem::discriminant;
 
     let rq = RequestContext::new(
         &ContentType::json(),
         r#"
         {
-            "query": "query MyQuery { field1, field2 }",
+            "quey": "query MyQuery { field1, field2 }",
             "operationName": "MyQuery",
             "variables": {}
         }
@@ -75,13 +89,14 @@ fn is_query() {
             GQLType::Query => true,
             _ => false,
         },
-        _ => false,
+        _ => {
+            panic!("Not a GQL context, got {:?} instead", rq);
+        },
     };
     assert_eq!(is_query, true)
 }
 
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GQLRequest {
     pub query: String,
     pub operation_name: Option<String>,
