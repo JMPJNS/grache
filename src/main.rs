@@ -31,7 +31,7 @@ async fn cache_post(
     TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
     body: String,
-) -> &'static str {
+) -> String {
     // config for this request
     let config = get_grache_config(&mut headers, &params);
 
@@ -49,7 +49,7 @@ async fn cache_post(
 
         }
     }
-    "aughh"
+    "aughh".into()
 }
 
 // async fn pass_options(request: Request<Body>) {}
