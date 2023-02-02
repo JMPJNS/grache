@@ -1,5 +1,8 @@
 name: deploy
 
+on:
+  workflow_dispatch:
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: jmpjns/grache
