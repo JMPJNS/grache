@@ -8,6 +8,7 @@ use axum::headers::ContentType;
 use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use axum::{routing::get, Router, TypedHeader};
 use std::collections::HashMap;
+use crate::request_context::RequestContext;
 
 #[tokio::main]
 async fn main() {
@@ -29,11 +30,15 @@ async fn cache_post(
     Query(params): Query<HashMap<String, String>>,
     TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
+    body: String,
 ) -> &'static str {
     // config for this request
     let config = get_grache_config(&mut headers, &params);
 
     // check what type of request it is
+    let request_context = RequestContext::new(&content_type, &body);
+    println!("{:?}", request_context);
+    println!("{:?}", config);
     "aughh"
 }
 

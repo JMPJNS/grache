@@ -5,6 +5,7 @@ use graphql_parser::query::{parse_query, Definition, OperationDefinition, ParseE
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[derive(Debug)]
 pub enum RequestContext {
     GQL(GQLRequest, GQLType),
     Unknown,
@@ -13,7 +14,7 @@ pub enum RequestContext {
 impl RequestContext {
     /// checks what type of request it is
     /// by looking at the content_type and trying to parse json/graphql
-    pub fn get_type(content_type: &ContentType, content: &str) -> RequestContext {
+    pub fn new(content_type: &ContentType, content: &str) -> RequestContext {
         if content_type != &ContentType::json() {
             return RequestContext::Unknown;
         }
@@ -59,7 +60,7 @@ impl RequestContext {
 fn is_query() {
     use std::mem::discriminant;
 
-    let rq = RequestContext::get_type(
+    let rq = RequestContext::new(
         &ContentType::json(),
         r#"
         {
@@ -79,6 +80,7 @@ fn is_query() {
     assert_eq!(is_query, true)
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 pub struct GQLRequest {
     pub query: String,
@@ -86,6 +88,7 @@ pub struct GQLRequest {
     pub variables: Value,
 }
 
+#[derive(Debug)]
 pub enum GQLType {
     Query,
     Mutation,

@@ -1,6 +1,7 @@
 use axum::http::HeaderMap;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct GracheConfig {
     /// * represents, in seconds, how long it should be cached for
     /// * set to 0 to bypass cache
