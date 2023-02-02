@@ -9,6 +9,7 @@ use serde_json::Value;
 pub enum RequestContext {
     Unknown,
     JSON(Value),
+    Text(String),
     GQL(GQLRequest, GQLType),
 }
 
@@ -18,6 +19,7 @@ impl RequestContext {
     pub fn new(content_type: &ContentType, content: &str) -> RequestContext {
         let mut rq = RequestContext::Unknown;
 
+        rq = RequestContext::check_for_text(&content_type, &content).unwrap_or(rq);
         rq = RequestContext::check_for_json(&content_type, &content).unwrap_or(rq);
         rq = RequestContext::check_for_gql(&content_type, &content).unwrap_or(rq);
 
@@ -59,12 +61,21 @@ impl RequestContext {
         }
         None
     }
+
     fn check_for_json(content_type: &ContentType, content: &str) -> Option<RequestContext> {
         if content_type == &ContentType::json() {
             let json = serde_json::from_str(&content);
             if let Some(data) = json.ok() {
                 return Some(RequestContext::JSON(data))
             }
+        }
+        None
+    }
+
+    fn check_for_text(content_type: &ContentType, content: &str) -> Option<RequestContext> {
+        let content_string: String = content_type.to_string();
+        if content_string.contains(&ContentType::text().to_string()) {
+            return Some(RequestContext::Text(content.into()))
         }
         None
     }
@@ -78,7 +89,7 @@ fn is_gql_query() {
         &ContentType::json(),
         r#"
         {
-            "quey": "query MyQuery { field1, field2 }",
+            "query": "query MyQuery { field1, field2 }",
             "operationName": "MyQuery",
             "variables": {}
         }
