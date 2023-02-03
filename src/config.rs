@@ -10,45 +10,55 @@ pub struct GracheConfig {
     ignore_cookies: bool,
 }
 
-/// # generate the grache config from headers and query parameters
-/// * prefers headers if provided
-/// ## sets default values if nothing is set
-/// * default value for @expiration: 600
-/// * default value for @ignore_cookies: false
-pub fn get_grache_config(
-    headers: &mut HeaderMap,
-    query_params: &HashMap<String, String>,
-) -> GracheConfig {
-    // parse ignore cookies
-    let mut ignore_cookies = query_params
-        .get("ignoreCookies")
-        .and_then(|ic| ic.parse::<bool>().ok())
-        .unwrap_or(false);
+impl GracheConfig {
+    /// # generate the grache config from headers and query parameters
+    /// * prefers headers if provided
+    /// ## sets default values if nothing is set
+    /// * default value for @expiration: 600
+    /// * default value for @ignore_cookies: false
+    pub fn new(headers: &mut HeaderMap, query_params: &HashMap<String, String>) -> GracheConfig {
+        let ignore_cookies = GracheConfig::get_option(
+            headers,
+            query_params,
+            "Grache_Ignore_Cookies",
+            "ignoreCookies",
+            false,
+        );
+        let expiration = GracheConfig::get_option(
+            headers,
+            query_params,
+            "Grache_Expiration",
+            "expiration",
+            600,
+        );
 
-    ignore_cookies = headers
-        .get("Grache_Ignore_Cookies")
-        .and_then(|ic| ic.to_str().ok())
-        .and_then(|ic| ic.parse::<bool>().ok())
-        .unwrap_or(ignore_cookies);
+        return GracheConfig {
+            ignore_cookies,
+            expiration,
+        };
+    }
 
-    headers.remove("Grache_Ignore_Cookies");
+    fn get_option<T>(
+        headers: &mut HeaderMap,
+        query_params: &HashMap<String, String>,
+        header_name: &str,
+        query_param_name: &str,
+        default: T,
+    ) -> T {
+        // use query_param first
+        let mut option = query_params
+            .get(query_param_name)
+            .and_then(|ic| ic.parse::<T>().ok())
+            .unwrap_or(default);
 
-    // parse expiration
-    let mut expiration = query_params
-        .get("ignoreCookies")
-        .and_then(|ic| ic.parse::<i32>().ok())
-        .unwrap_or(600);
+        // and then override it if the corresponding header is present
+        option = headers
+            .get(header_name)
+            .and_then(|ic| ic.to_str().ok())
+            .and_then(|ic| ic.parse::<T>().ok())
+            .unwrap_or(option);
 
-    expiration = headers
-        .get("Grache_Expiration")
-        .and_then(|ex| ex.to_str().ok())
-        .and_then(|ex| ex.parse::<i32>().ok())
-        .unwrap_or(600);
-
-    headers.remove("Grache_Expiration");
-    // return
-    GracheConfig {
-        ignore_cookies,
-        expiration,
+        headers.remove(header_name);
+        return option;
     }
 }

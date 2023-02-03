@@ -56,7 +56,7 @@ impl RequestContext {
                     } else {
                         GQLType::Query
                     },
-                ))
+                ));
             }
         }
         None
@@ -66,7 +66,7 @@ impl RequestContext {
         if content_type == &ContentType::json() {
             let json = serde_json::from_str(&content);
             if let Some(data) = json.ok() {
-                return Some(RequestContext::JSON(data))
+                return Some(RequestContext::JSON(data));
             }
         }
         None
@@ -75,7 +75,7 @@ impl RequestContext {
     fn check_for_text(content_type: &ContentType, content: &str) -> Option<RequestContext> {
         let content_string: String = content_type.to_string();
         if content_string.contains(&ContentType::text().to_string()) {
-            return Some(RequestContext::Text(content.into()))
+            return Some(RequestContext::Text(content.into()));
         }
         None
     }
@@ -102,7 +102,7 @@ fn is_gql_query() {
         },
         _ => {
             panic!("Not a GQL context, got {:?} instead", rq);
-        },
+        }
     };
     assert_eq!(is_query, true)
 }

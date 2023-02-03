@@ -1,7 +1,7 @@
 mod config;
 mod request_context;
 
-use crate::config::get_grache_config;
+use crate::config::{get_grache_config, GracheConfig};
 use crate::request_context::RequestContext;
 use axum::body::Body;
 use axum::extract::Query;
@@ -33,7 +33,7 @@ async fn cache_post(
     body: String,
 ) -> String {
     // config for this request
-    let config = get_grache_config(&mut headers, &params);
+    let config = GracheConfig::new(&mut headers, &params);
 
     // check what type of request it is
     let request_context = RequestContext::new(&content_type, &body);
@@ -41,16 +41,10 @@ async fn cache_post(
     // TODO extract the object to cache out of this, should be the same for every type that is cachable
     // prolly like {data enum, url}
     match request_context {
-        RequestContext::GQL(gql, request_type) => {
-
-        }
-        RequestContext::JSON(val) => {
-
-        }
+        RequestContext::GQL(gql, request_type) => {}
+        RequestContext::JSON(val) => {}
         // always pass through any unknown requests
-        _ => {
-
-        }
+        _ => {}
     }
     "aughh".into()
 }
