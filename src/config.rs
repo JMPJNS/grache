@@ -1,13 +1,16 @@
 use axum::http::HeaderMap;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct GracheConfig {
     /// * represents, in seconds, how long it should be cached for
     /// * set to 0 to bypass cache
-    expiration: i32,
-    /// if set to true, ignores the Cookie header for this request
-    ignore_cookies: bool,
+    pub expiration: i32,
+    /// if set to true, ignores authentication for this request
+    pub ignore_auth: bool,
+    /// if set to true, also caches graphql mutations not just querries
+    pub cache_mutations: bool,
 }
 
 impl GracheConfig {
@@ -17,11 +20,11 @@ impl GracheConfig {
     /// * default value for @expiration: 600
     /// * default value for @ignore_cookies: false
     pub fn new(headers: &mut HeaderMap, query_params: &HashMap<String, String>) -> GracheConfig {
-        let ignore_cookies = GracheConfig::get_option(
+        let ignore_auth = GracheConfig::get_option(
             headers,
             query_params,
-            "Grache_Ignore_Cookies",
-            "ignoreCookies",
+            "Grache_Ignore_Auth",
+            "ignoreAuth",
             false,
         );
         let expiration = GracheConfig::get_option(
@@ -31,14 +34,22 @@ impl GracheConfig {
             "expiration",
             600,
         );
+        let cache_mutations = GracheConfig::get_option(
+            headers,
+            query_params,
+            "Grache_Cache_Mutations",
+            "cacheMutations",
+            false,
+        );
 
         return GracheConfig {
-            ignore_cookies,
+            ignore_auth,
             expiration,
+            cache_mutations,
         };
     }
 
-    fn get_option<T>(
+    fn get_option<T: FromStr>(
         headers: &mut HeaderMap,
         query_params: &HashMap<String, String>,
         header_name: &str,

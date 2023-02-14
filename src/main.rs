@@ -1,23 +1,25 @@
 mod config;
+mod request_body;
 mod request_context;
 
-use crate::config::{get_grache_config, GracheConfig};
-use crate::request_context::RequestContext;
+use crate::config::{GracheConfig};
+use crate::request_body::RequestBody;
 use axum::body::Body;
 use axum::extract::Query;
 use axum::headers::ContentType;
 use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
-use axum::{routing::get, Router, TypedHeader};
+use axum::{routing::get, Router, TypedHeader, extract};
 use std::collections::HashMap;
+use std::hash::Hash;
+use tower_cookies::{CookieManagerLayer, Cookies};
+use crate::request_context::RequestContext;
 
 #[tokio::main]
 async fn main() {
-    // build our application with a single route
     let app = Router::new().route(
         "/",
-        // TODO allow get requests aswell
-        get(|| async { (StatusCode::BAD_REQUEST, "Only POST method allowed") }).post(cache_post), // .options(pass_options),
-    );
+        get(handle).post(handle), // .options(pass_options),
+    ).layer(CookieManagerLayer::new());
 
     axum::Server::bind(&"0.0.0.0:3333".parse().unwrap())
         .serve(app.into_make_service())
@@ -26,26 +28,34 @@ async fn main() {
 }
 
 #[axum_macros::debug_handler]
-async fn cache_post(
+async fn handle(
     Query(params): Query<HashMap<String, String>>,
     TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
-    body: String,
+    cookies: Cookies,
+    extract::OriginalUri(uri): extract::OriginalUri,
+    body: Option<String>,
 ) -> String {
-    // config for this request
     let config = GracheConfig::new(&mut headers, &params);
 
-    // check what type of request it is
-    let request_context = RequestContext::new(&content_type, &body);
+    let request_body = RequestBody::new(&content_type, &body);
 
-    // TODO extract the object to cache out of this, should be the same for every type that is cachable
-    // prolly like {data enum, url}
-    match request_context {
-        RequestContext::GQL(gql, request_type) => {}
-        RequestContext::JSON(val) => {}
-        // always pass through any unknown requests
-        _ => {}
+    if request_body.is_none() {
+        // TODO: just pass through the request without caching it
+        return "not yet implemented".into()
     }
+    let body = request_body.unwrap();
+    let url = uri.to_string();
+    println!("{:?}", url);
+
+    let context = RequestContext {
+        body,
+        config,
+        headers,
+        cookies,
+        url
+    };
+
     "aughh".into()
 }
 
