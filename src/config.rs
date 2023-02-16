@@ -1,16 +1,19 @@
 use axum::http::HeaderMap;
 use std::collections::HashMap;
+use std::env;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GracheConfig {
     /// * represents, in seconds, how long it should be cached for
     /// * set to 0 to bypass cache
     pub expiration: i32,
     /// if set to true, ignores authentication for this request
     pub ignore_auth: bool,
-    /// if set to true, also caches graphql mutations not just querries
+    /// if set to true, also caches graphql mutations not just queries
     pub cache_mutations: bool,
+    /// url where to send the request to
+    pub url: String,
 }
 
 impl GracheConfig {
@@ -41,11 +44,19 @@ impl GracheConfig {
             "cacheMutations",
             false,
         );
+        let url = GracheConfig::get_option(
+            headers,
+            query_params,
+            "Grache_Url",
+            "url",
+            env::var("GRACHE_URL").unwrap_or("https://graphql.anilist.co/".into()),
+        );
 
         return GracheConfig {
             ignore_auth,
             expiration,
             cache_mutations,
+            url
         };
     }
 

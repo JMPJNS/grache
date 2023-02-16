@@ -3,7 +3,7 @@ use graphql_parser::query::{parse_query, Definition, OperationDefinition, ParseE
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RequestBody {
     Unknown,
     JSON(Value),
@@ -26,6 +26,19 @@ impl RequestBody {
         }
 
         return Some(rq);
+    }
+
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            RequestBody::GQL(req, req_type) => {
+                serde_json::to_string(req).ok()
+            },
+            RequestBody::Text(t) => Some(t.to_string()),
+            RequestBody::JSON(v) => {
+                serde_json::to_string(v).ok()
+            },
+            RequestBody::Unknown => None
+        }
     }
 
     fn check_for_gql(content: &str) -> Option<RequestBody> {
@@ -108,14 +121,14 @@ fn is_gql_query() {
     assert_eq!(is_query, true)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GQLRequest {
     pub query: String,
     pub operation_name: Option<String>,
     pub variables: Value,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum GQLType {
     Query,
     Mutation,
