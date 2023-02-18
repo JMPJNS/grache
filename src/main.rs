@@ -36,16 +36,14 @@ async fn main() {
 
 #[axum_macros::debug_handler]
 async fn handle(
-    method: Method,
     Query(params): Query<HashMap<String, String>>,
-    TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
     cookies: Cookies,
     body: Option<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)>{
     let config = GracheConfig::new(&mut headers, &params);
 
-    let body = RequestBody::new(&content_type, &body).ok_or((
+    let body = RequestBody::new(&body).ok_or((
         StatusCode::BAD_REQUEST,
         String::from("Invalid Request Body"),
     ))?;
@@ -63,5 +61,3 @@ async fn handle(
 
     return Ok((AppendHeaders(response_headers?), res.content))
 }
-
-// async fn pass_options(request: Request<Body>) {}

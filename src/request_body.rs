@@ -14,12 +14,12 @@ pub enum RequestBody {
 impl RequestBody {
     /// checks what type of request it is
     /// by looking at the content_type and trying to parse json/graphql
-    pub fn new(content_type: &ContentType, content: &Option<String>) -> Option<RequestBody> {
+    pub fn new(content: &Option<String>) -> Option<RequestBody> {
         let mut rq = RequestBody::Unknown;
 
         if let Some(content) = content {
-            rq = RequestBody::check_for_text(&content_type, &content).unwrap_or(rq);
-            rq = RequestBody::check_for_json(&content_type, &content).unwrap_or(rq);
+            rq = RequestBody::check_for_text(&content).unwrap_or(rq);
+            rq = RequestBody::check_for_json(&content).unwrap_or(rq);
             rq = RequestBody::check_for_gql(&content).unwrap_or(rq);
         } else {
             return None;
@@ -73,19 +73,16 @@ impl RequestBody {
         None
     }
 
-    fn check_for_json(content_type: &ContentType, content: &str) -> Option<RequestBody> {
-        if content_type == &ContentType::json() {
-            let json = serde_json::from_str(&content);
+    fn check_for_json(content: &str) -> Option<RequestBody> {
+        let json = serde_json::from_str(&content);
             if let Some(data) = json.ok() {
                 return Some(RequestBody::JSON(data));
             }
-        }
         None
     }
 
-    fn check_for_text(content_type: &ContentType, content: &str) -> Option<RequestBody> {
-        let content_string: String = content_type.to_string();
-        if content_string.contains(&ContentType::text().to_string()) {
+    fn check_for_text(content: &str) -> Option<RequestBody> {
+        if content.len() > 0 {
             return Some(RequestBody::Text(content.into()));
         }
         None
@@ -95,7 +92,6 @@ impl RequestBody {
 #[test]
 fn is_gql_query() {
     let rq = RequestBody::new(
-        &ContentType::json(),
         &String::from(
             r#"
         {
