@@ -1,4 +1,5 @@
 use crate::config::GracheConfig;
+use crate::headers::Headers;
 use crate::request_body::{GQLType, RequestBody};
 use anyhow::{anyhow, Result};
 use axum::headers::HeaderValue;
@@ -13,7 +14,7 @@ pub struct RequestContext {
     pub body: RequestBody,
     pub cookies: Cookies,
     pub config: GracheConfig,
-    pub headers: Option<HeaderMap>,
+    pub headers: Option<Headers>,
 }
 
 impl RequestContext {
@@ -30,7 +31,7 @@ impl RequestContext {
             headers: None,
         };
         if context.set_headers(&headers).is_err() {
-            context.headers = Some(headers);
+            context.headers = Some(Headers::from_header_map(&headers));
         }
         return context;
     }
@@ -55,7 +56,7 @@ impl RequestContext {
         parsed_headers.remove("Content-Length");
         parsed_headers.remove("Accept-Encoding");
         parsed_headers.insert("Accept-Encoding", HeaderValue::from_str("gzip".into())?);
-        self.headers = Some(parsed_headers);
+        self.headers = Some(Headers::from_header_map(&parsed_headers));
         Ok(())
     }
 }

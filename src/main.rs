@@ -10,12 +10,13 @@ use crate::request_body::RequestBody;
 use crate::request_context::RequestContext;
 use axum::body::Body;
 use axum::extract::Query;
-use axum::headers::ContentType;
-use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
-use axum::response::{IntoResponse, Response};
+use axum::headers::{ContentType, HeaderName};
+use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode, response};
+use axum::response::{IntoResponse, Response, AppendHeaders};
 use axum::{extract, routing::get, Router, TypedHeader};
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::vec;
 use tower_cookies::{CookieManagerLayer, Cookies};
 
 #[tokio::main]
@@ -40,9 +41,8 @@ async fn handle(
     TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
     cookies: Cookies,
-    extract::OriginalUri(uri): extract::OriginalUri,
     body: Option<String>,
-) -> Result<String, (StatusCode, String)> {
+) -> Result<impl IntoResponse, (StatusCode, String)>{
     let config = GracheConfig::new(&mut headers, &params);
 
     let body = RequestBody::new(&content_type, &body).ok_or((
@@ -50,12 +50,18 @@ async fn handle(
         String::from("Invalid Request Body"),
     ))?;
 
+    println!("Handling {:?}", body);
+
     let context = RequestContext::new(body, cookies, config, headers);
-    let hash = context.cache_key();
+    // let hash = context.cache_key();
     let res = post_request(&context)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(res.content)
+
+    let response_headers = res.headers.to_response_headers()
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()));
+
+    return Ok((AppendHeaders(response_headers?), res.content))
 }
 
 // async fn pass_options(request: Request<Body>) {}

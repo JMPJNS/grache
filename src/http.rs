@@ -19,7 +19,10 @@ pub async fn post_request(context: &RequestContext) -> Result<Response> {
     let body = context.body.to_string();
     let mut req = client.post(context.config.url);
     if let Some(headers) = context.headers {
-        req = req.headers(headers)
+        let headers = headers.to_header_map();
+        if headers.is_ok() {
+            req = req.headers(headers?);
+        }
     }
     if let Some(body) = body {
         req = req.body(body.to_string())

@@ -5,7 +5,7 @@ use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Headers {
     inner: HashMap<String, Vec<String>>,
 }
@@ -34,5 +34,23 @@ impl Headers {
             }
         }
         Ok(header_map)
+    }
+
+    pub fn to_response_headers(&self) -> Result<Vec<(HeaderName, HeaderValue)>> {
+        let mut response_vec: Vec<(HeaderName, HeaderValue)> = Vec::new();
+
+        for (k, v) in self.inner.clone() {
+            for s in v {
+                let name = HeaderName::from_str(k.as_str())?;
+                if name.as_str() == "transfer-encoding" {
+                    continue;
+                }
+                let value = HeaderValue::from_str(s.as_str())?;
+                
+                response_vec.push((name, value))
+            }
+        }
+
+        return Ok(response_vec)
     }
 }
