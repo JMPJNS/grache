@@ -22,7 +22,7 @@ impl RequestBody {
             rq = RequestBody::check_for_json(&content_type, &content).unwrap_or(rq);
             rq = RequestBody::check_for_gql(&content).unwrap_or(rq);
         } else {
-            return None
+            return None;
         }
 
         return Some(rq);
@@ -30,14 +30,10 @@ impl RequestBody {
 
     pub fn to_string(&self) -> Option<String> {
         match self {
-            RequestBody::GQL(req, req_type) => {
-                serde_json::to_string(req).ok()
-            },
+            RequestBody::GQL(req, req_type) => serde_json::to_string(req).ok(),
             RequestBody::Text(t) => Some(t.to_string()),
-            RequestBody::JSON(v) => {
-                serde_json::to_string(v).ok()
-            },
-            RequestBody::Unknown => None
+            RequestBody::JSON(v) => serde_json::to_string(v).ok(),
+            RequestBody::Unknown => None,
         }
     }
 
@@ -100,13 +96,16 @@ impl RequestBody {
 fn is_gql_query() {
     let rq = RequestBody::new(
         &ContentType::json(),
-        &String::from(r#"
+        &String::from(
+            r#"
         {
             "query": "query MyQuery { field1, field2 }",
             "operationName": "MyQuery",
             "variables": {}
         }
-        "#).into(),
+        "#,
+        )
+        .into(),
     );
     let rq = rq.unwrap();
     let is_query = match rq {

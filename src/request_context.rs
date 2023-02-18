@@ -1,11 +1,12 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use axum::headers::HeaderValue;
-use axum::http::HeaderMap;
-use url::{Url, ParseError};
-use tower_cookies::Cookies;
 use crate::config::GracheConfig;
 use crate::request_body::{GQLType, RequestBody};
+use anyhow::{anyhow, Result};
+use axum::headers::HeaderValue;
+use axum::http::HeaderMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use tower_cookies::Cookies;
+use url::{ParseError, Url};
 
 #[derive(Clone)]
 pub struct RequestContext {
@@ -16,23 +17,30 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub fn new(body: RequestBody, cookies: Cookies, config: GracheConfig, headers: HeaderMap) -> RequestContext {
+    pub fn new(
+        body: RequestBody,
+        cookies: Cookies,
+        config: GracheConfig,
+        headers: HeaderMap,
+    ) -> RequestContext {
         let mut context = RequestContext {
             body,
             cookies,
             config,
-            headers: None
+            headers: None,
         };
         if context.set_headers(&headers).is_err() {
             context.headers = Some(headers);
         }
-        return context
+        return context;
     }
 
-    pub fn set_headers(&mut self, headers: &HeaderMap) -> Result<(), Option<ParseError>> {
+    pub fn set_headers(&mut self, headers: &HeaderMap) -> Result<()> {
         let mut parsed_headers = headers.clone();
         let host = Url::parse(&self.config.url)?;
-        let host = host.host_str().ok_or(None)?;
+        let host = host
+            .host_str()
+            .ok_or(anyhow!("extracting host string failed"))?;
 
         // TODO figure out a way how to do this without having it being error prone
         // by needing to check which headers grache uses manuall
@@ -43,10 +51,10 @@ impl RequestContext {
         parsed_headers.remove("Grache-Url");
 
         parsed_headers.remove("Host");
-        parsed_headers.insert("Host", HeaderValue::from_str(host).map_err(|_| None)?);
+        parsed_headers.insert("Host", HeaderValue::from_str(host)?);
         parsed_headers.remove("Content-Length");
         parsed_headers.remove("Accept-Encoding");
-        parsed_headers.insert("Accept-Encoding", HeaderValue::from_str("gzip".into()).map_err(|_| None)?);
+        parsed_headers.insert("Accept-Encoding", HeaderValue::from_str("gzip".into())?);
         self.headers = Some(parsed_headers);
         Ok(())
     }
@@ -72,13 +80,13 @@ impl Hash for RequestContext {
                     gql.query.hash(state);
                     gql.variables.to_string().hash(state);
                 }
-            },
+            }
             RequestBody::JSON(v) => {
                 v.to_string().hash(state);
-            },
+            }
             RequestBody::Text(v) => {
                 v.hash(state);
-            },
+            }
             RequestBody::Unknown => {}
         };
     }

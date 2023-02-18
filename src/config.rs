@@ -56,7 +56,7 @@ impl GracheConfig {
             ignore_auth,
             expiration,
             cache_mutations,
-            url
+            url,
         };
     }
 
