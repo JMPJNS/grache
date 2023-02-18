@@ -26,28 +26,28 @@ impl GracheConfig {
         let ignore_auth = GracheConfig::get_option(
             headers,
             query_params,
-            "Grache_Ignore_Auth",
+            "Grache-Ignore-Auth",
             "ignoreAuth",
             false,
         );
         let expiration = GracheConfig::get_option(
             headers,
             query_params,
-            "Grache_Expiration",
+            "Grache-Expiration",
             "expiration",
             600,
         );
         let cache_mutations = GracheConfig::get_option(
             headers,
             query_params,
-            "Grache_Cache_Mutations",
+            "Grache-Cache-Mutations",
             "cacheMutations",
             false,
         );
         let url = GracheConfig::get_option(
             headers,
             query_params,
-            "Grache_Url",
+            "Grache-Url",
             "url",
             env::var("GRACHE_URL").unwrap_or("https://graphql.anilist.co/".into()),
         );

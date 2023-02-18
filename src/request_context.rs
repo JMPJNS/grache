@@ -1,12 +1,9 @@
 use std::collections::hash_map::DefaultHasher;
-use anyhow::{anyhow, Result};
 use std::hash::{Hash, Hasher};
 use axum::headers::HeaderValue;
-use axum::http::header::InvalidHeaderValue;
 use axum::http::HeaderMap;
 use url::{Url, ParseError};
 use tower_cookies::Cookies;
-use tower_http::classify::GrpcFailureClass::Error;
 use crate::config::GracheConfig;
 use crate::request_body::{GQLType, RequestBody};
 
@@ -32,12 +29,24 @@ impl RequestContext {
         return context
     }
 
-    pub fn set_headers(&mut self, headers: &HeaderMap) -> Result<()> {
+    pub fn set_headers(&mut self, headers: &HeaderMap) -> Result<(), Option<ParseError>> {
         let mut parsed_headers = headers.clone();
         let host = Url::parse(&self.config.url)?;
-        let host = host.host_str().ok_or(anyhow!("Converting host to string failed"))?;
+        let host = host.host_str().ok_or(None)?;
+
+        // TODO figure out a way how to do this without having it being error prone
+        // by needing to check which headers grache uses manuall
+        // probably using an enum for grache headers
+        parsed_headers.remove("Grache-Ignore-Auth");
+        parsed_headers.remove("Grache-Expiration");
+        parsed_headers.remove("Grache-Cache-Mutations");
+        parsed_headers.remove("Grache-Url");
+
         parsed_headers.remove("Host");
-        parsed_headers.insert("Host", HeaderValue::from_str(host)?);
+        parsed_headers.insert("Host", HeaderValue::from_str(host).map_err(|_| None)?);
+        parsed_headers.remove("Content-Length");
+        parsed_headers.remove("Accept-Encoding");
+        parsed_headers.insert("Accept-Encoding", HeaderValue::from_str("gzip".into()).map_err(|_| None)?);
         self.headers = Some(parsed_headers);
         Ok(())
     }

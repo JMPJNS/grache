@@ -1,3 +1,4 @@
+use axum::http::HeaderMap;
 use reqwest::{StatusCode, Error};
 use serde::{Deserialize, Serialize};
 use crate::request_context::RequestContext;
@@ -17,10 +18,8 @@ pub async fn post_request(context: RequestContext) -> Result<Response, Error> {
         req = req.headers(headers)
     }
     if let Some(body) = body {
-        //TODO: figure out why the sent body is invalid
         req = req.body(body.to_string())
     }
-    println!("{:?}", req);
     let res = req.send().await?;
     return Ok(Response {
         status: res.status(),

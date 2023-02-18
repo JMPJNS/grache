@@ -5,10 +5,11 @@ mod http;
 
 use crate::config::{GracheConfig};
 use crate::request_body::RequestBody;
+use axum::response::{IntoResponse, Response};
 use axum::body::Body;
 use axum::extract::Query;
 use axum::headers::ContentType;
-use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
 use axum::{routing::get, Router, TypedHeader, extract};
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -20,7 +21,7 @@ use crate::request_context::RequestContext;
 async fn main() {
     let app = Router::new().route(
         "/",
-        get(handle_get).post(handle_post), // .options(pass_options),
+        get(handle).post(handle), // .options(pass_options),
     ).layer(CookieManagerLayer::new());
 
     axum::Server::bind(&"0.0.0.0:3333".parse().unwrap())
@@ -30,45 +31,25 @@ async fn main() {
 }
 
 #[axum_macros::debug_handler]
-async fn handle_get(
-    Query(params): Query<HashMap<String, String>>,
-    TypedHeader(content_type): TypedHeader<ContentType>,
-    mut headers: HeaderMap,
-    cookies: Cookies,
-    body: Option<String>,
-) -> String {
-    let config = GracheConfig::new(&mut headers, &params);
-
-    let context = RequestContext::new(RequestBody::Unknown, cookies, config, headers);
-    let hash = context.cache_key();
-
-    "aughh".into()
-}
-
-#[axum_macros::debug_handler]
-async fn handle_post(
+async fn handle(
+    method: Method,
     Query(params): Query<HashMap<String, String>>,
     TypedHeader(content_type): TypedHeader<ContentType>,
     mut headers: HeaderMap,
     cookies: Cookies,
     extract::OriginalUri(uri): extract::OriginalUri,
     body: Option<String>,
-) -> String {
+) -> Result<String, (StatusCode, String)> {
     let config = GracheConfig::new(&mut headers, &params);
 
-    let request_body = RequestBody::new(&content_type, &body);
-    if request_body.is_none() {
-        // TODO: just pass through the request without caching it
-        return "not yet implemented".into()
-    }
-    let body = request_body.unwrap();
+    let body = RequestBody::new(&content_type, &body)
+        .ok_or((StatusCode::BAD_REQUEST, String::from("Invalid Request Body")))?;
 
     let context = RequestContext::new(body, cookies, config, headers);
     let hash = context.cache_key();
-    let res = post_request(context).await;
-    println!("{:?}", res);
-
-    "aughh".into()
+    let res = post_request(context).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(res.content)
 }
 
 // async fn pass_options(request: Request<Body>) {}
