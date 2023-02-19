@@ -4,7 +4,7 @@ Graphql Caching service
 This service proxies graphql queries and caches them for 
 a specified amount of time (configurable on a per-request basis).
 
-By Default, itt only caches queries, not mutations (optionally can be cached aswell) and checks the session 
+By Default, it only caches queries, not mutations (optionally can be cached aswell) and checks the session 
 Cookie (optional, enable on per-request basis)
 to respond with the correct data for the currently authenticated User.
 
