@@ -7,7 +7,7 @@ use axum::http::HeaderMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use tower_cookies::Cookies;
-use url::{Url};
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct RequestContext {

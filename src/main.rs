@@ -9,32 +9,34 @@ use crate::http::{post_request, Response};
 use crate::request_body::RequestBody;
 use crate::request_context::RequestContext;
 
-use redis::Commands;
 use axum::extract::{Query, State};
+use redis::Commands;
 
 use axum::http::{HeaderMap, StatusCode};
-use axum::response::{IntoResponse, AppendHeaders};
+use axum::response::{AppendHeaders, IntoResponse};
 use axum::{routing::get, Router};
 use std::collections::HashMap;
 
-
-use std::{env};
+use std::env;
+use std::net::SocketAddr;
 use tower_cookies::{CookieManagerLayer, Cookies};
 
 #[tokio::main]
 async fn main() {
-
-    let redis_client = redis::Client::open(env::var("REDIS_URL").unwrap_or(String::from("redis://127.0.0.1/"))).unwrap();
+    let redis_client =
+        redis::Client::open(env::var("REDIS_URL").unwrap_or("redis://127.0.0.1/".into())).unwrap();
 
     let app = Router::new()
-        .route(
-            "/",
-            get(handle).post(handle),
-        )
+        .route("/", get(handle).post(handle))
         .layer(CookieManagerLayer::new())
         .with_state(redis_client);
 
-    axum::Server::bind(&"0.0.0.0:3333".parse().unwrap())
+    let addr = SocketAddr::new(
+        "0.0.0.0".parse().unwrap(),
+        env::var("PORT").unwrap_or("3333".into()).parse().unwrap(),
+    );
+    println!("Server Starting on {:?}", addr);
+    axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
@@ -47,11 +49,13 @@ async fn handle(
     mut headers: HeaderMap,
     cookies: Cookies,
     body: Option<String>,
-) -> Result<impl IntoResponse, (StatusCode, String)>{
-    let mut con = redis_client.get_connection().map_err(|e| (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Connection to Redis failed: {:?}", e)
-    ))?;
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let mut con = redis_client.get_connection().map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Connection to Redis failed: {:?}", e),
+        )
+    })?;
 
     let config = GracheConfig::new(&mut headers, &params);
 
@@ -68,26 +72,29 @@ async fn handle(
     let cache_hit = res.is_some();
     println!("Cache Hit {:?}", cache_hit);
 
-
     let mut res = if let Some(res) = res {
         res
     } else {
-        let res = post_request(&context)
-            .await;
+        let res = post_request(&context).await;
 
         let res = res.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         res
     };
 
     res.headers.set_cache_hit(cache_hit);
-    
+
     if !cache_hit && res.status.unwrap_or(StatusCode::NOT_FOUND) == StatusCode::OK {
-        let _ = con.set::<u64, std::option::Option<std::string::String>, redis::Value>(cache_key, res.to_string());
+        let _ = con.set::<u64, std::option::Option<std::string::String>, redis::Value>(
+            cache_key,
+            res.to_string(),
+        );
         let _ = con.expire::<u64, redis::Value>(cache_key, context.config.expiration);
     }
 
-    let response_headers = res.headers.to_response_headers()
+    let response_headers = res
+        .headers
+        .to_response_headers()
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    return Ok((AppendHeaders(response_headers), res.content))
+    return Ok((AppendHeaders(response_headers), res.content));
 }

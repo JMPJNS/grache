@@ -1,7 +1,7 @@
 use crate::headers::Headers;
 use crate::request_context::RequestContext;
 use anyhow::Result;
-use redis::{FromRedisValue, RedisResult, from_redis_value, ErrorKind};
+use redis::{from_redis_value, ErrorKind, FromRedisValue, RedisResult};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ impl FromRedisValue for Response {
         let v: String = from_redis_value(v)?;
         let deserialized: Option<Response> = serde_json::from_str(&v).ok();
         if let Some(res) = deserialized {
-            return Ok(res)
+            return Ok(res);
         } else {
             Err((ErrorKind::TypeError, "Error Deserializing JSON").into())
         }

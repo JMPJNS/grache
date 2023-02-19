@@ -46,19 +46,21 @@ impl Headers {
                     continue;
                 }
                 let value = HeaderValue::from_str(s.as_str())?;
-                
+
                 response_vec.push((name, value))
             }
         }
 
-        return Ok(response_vec)
+        return Ok(response_vec);
     }
 
     pub fn set_cache_hit(&mut self, cache_hit: bool) {
         if cache_hit {
-            self.inner.insert("Grache-Cache-Hit".into(), vec!["true".into()]);
+            self.inner
+                .insert("Grache-Cache-Hit".into(), vec!["true".into()]);
         } else {
-            self.inner.insert("Grache-Cache-Hit".into(), vec!["false".into()]);
+            self.inner
+                .insert("Grache-Cache-Hit".into(), vec!["false".into()]);
         }
     }
 }

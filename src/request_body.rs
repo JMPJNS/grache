@@ -1,4 +1,3 @@
-
 use graphql_parser::query::{parse_query, Definition, OperationDefinition};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
