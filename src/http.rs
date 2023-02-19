@@ -33,12 +33,12 @@ impl FromRedisValue for Response {
 
 pub async fn post_request(context: &RequestContext) -> Result<Response> {
     let context = context.clone();
-
     let client = reqwest::Client::new();
     let mut req = client.post(context.config.url);
 
     if let Some(headers) = context.headers {
         let headers = headers.to_header_map();
+
         if headers.is_ok() {
             req = req.headers(headers?);
         }

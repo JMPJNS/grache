@@ -61,17 +61,21 @@ async fn handle(
     ))?;
 
     let context = RequestContext::new(body, cookies, config, headers);
+    println!("Handling {:?}", context);
     let cache_key = context.cache_key();
 
     let res: Option<Response> = con.get(cache_key).ok();
     let cache_hit = res.is_some();
+    println!("Cache Hit {:?}", cache_hit);
+
 
     let mut res = if let Some(res) = res {
         res
     } else {
         let res = post_request(&context)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .await;
+
+        let res = res.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         res
     };
 

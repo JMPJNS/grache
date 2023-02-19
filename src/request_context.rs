@@ -9,7 +9,7 @@ use std::hash::{Hash, Hasher};
 use tower_cookies::Cookies;
 use url::{Url};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct RequestContext {
     pub body: RequestBody,
     pub cookies: Cookies,
