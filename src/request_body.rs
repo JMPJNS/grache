@@ -1,5 +1,5 @@
-use axum::headers::ContentType;
-use graphql_parser::query::{parse_query, Definition, OperationDefinition, ParseError};
+
+use graphql_parser::query::{parse_query, Definition, OperationDefinition};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -30,7 +30,7 @@ impl RequestBody {
 
     pub fn to_string(&self) -> Option<String> {
         match self {
-            RequestBody::GQL(req, req_type) => serde_json::to_string(req).ok(),
+            RequestBody::GQL(req, _req_type) => serde_json::to_string(req).ok(),
             RequestBody::Text(t) => Some(t.to_string()),
             RequestBody::JSON(v) => serde_json::to_string(v).ok(),
             RequestBody::Unknown => None,

@@ -1,7 +1,7 @@
 use crate::headers::Headers;
 use crate::request_context::RequestContext;
 use anyhow::Result;
-use redis::{FromRedisValue, RedisResult, from_redis_value, ErrorKind, RedisError, ToRedisArgs};
+use redis::{FromRedisValue, RedisResult, from_redis_value, ErrorKind};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
