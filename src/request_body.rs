@@ -75,9 +75,9 @@ impl RequestBody {
 
     fn check_for_json(content: &str) -> Option<RequestBody> {
         let json = serde_json::from_str(&content);
-            if let Some(data) = json.ok() {
-                return Some(RequestBody::JSON(data));
-            }
+        if let Some(data) = json.ok() {
+            return Some(RequestBody::JSON(data));
+        }
         None
     }
 

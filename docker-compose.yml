@@ -1,0 +1,15 @@
+version: "3"
+services:
+  grache:
+    build: .
+    ports:
+      - 3333:3333
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GRACHE_URL=https://graphql.anilist.co/
+    restart: on-failure
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    restart: on-failure

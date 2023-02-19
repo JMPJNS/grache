@@ -53,4 +53,12 @@ impl Headers {
 
         return Ok(response_vec)
     }
+
+    pub fn set_cache_hit(&mut self, cache_hit: bool) {
+        if cache_hit {
+            self.inner.insert("Grache-Cache-Hit".into(), vec!["true".into()]);
+        } else {
+            self.inner.insert("Grache-Cache-Hit".into(), vec!["false".into()]);
+        }
+    }
 }

@@ -7,7 +7,7 @@ use std::str::FromStr;
 pub struct GracheConfig {
     /// * represents, in seconds, how long it should be cached for
     /// * set to 0 to bypass cache
-    pub expiration: i32,
+    pub expiration: usize,
     /// if set to true, ignores authentication for this request
     pub ignore_auth: bool,
     /// if set to true, also caches graphql mutations not just queries
