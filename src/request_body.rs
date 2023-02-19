@@ -12,7 +12,7 @@ pub enum RequestBody {
 
 impl RequestBody {
     /// checks what type of request it is
-    /// by looking at the content_type and trying to parse json/graphql
+    /// by trying to parse json/graphql
     pub fn new(content: &Option<String>) -> Option<RequestBody> {
         let mut rq = RequestBody::Unknown;
 
